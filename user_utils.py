@@ -30,10 +30,10 @@ def register(user, password):
     save_users(users)
     return True
 
-def update_profile(user, name, email, address, phone):
+def update_profile(user, name, email, address, phone, loan_duration):
     users = load_users()
     if user in users:
-        users[user] = {'password': users[user], 'name': name, 'email': email, 'address': address, 'phone': phone}
+        users[user] = {'password': users[user], 'name': name, 'email': email, 'address': address, 'phone': phone, 'loan_duration': loan_duration.strftime('%Y-%m-%d')}
         save_users(users)
         return True
     return False
@@ -41,5 +41,7 @@ def update_profile(user, name, email, address, phone):
 def load_profile(user):
     users = load_users()
     if user in users:
-        return users[user]
+        profile = users[user]
+        profile['loan_duration'] = pd.to_datetime(profile['loan_duration'])
+        return profile
     return None
