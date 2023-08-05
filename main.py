@@ -2,11 +2,11 @@ import streamlit as st
 import pandas as pd
 import os
 from user_utils import login, register, update_profile, load_profile
-from item_utils import load_items, save_items, add_item, view_items, delete_item, search_item, edit_item, export_data
+from item_utils import load_items, save_items, add_item, view_items, delete_item, search_item, edit_item, export_data, generate_report
 
 # Inisialisasi state
 if 'df' not in st.session_state:
-    st.session_state['df'] = pd.DataFrame(columns=['Nama Barang', 'Jumlah', 'Kategori', 'Berat (Kg)'])
+    st.session_state['df'] = pd.DataFrame(columns=['Nama Barang', 'Jumlah', 'Kategori', 'Berat (Kg)', 'Tanggal Pengembalian'])
 
 if 'loggedin' not in st.session_state:
     st.session_state['loggedin'] = False
@@ -18,7 +18,7 @@ if 'register' not in st.session_state:
 if not st.session_state.get('loggedin', False):
     menu = ['Login', 'Register']
 else:
-    menu = ['Tambah Barang', 'Lihat Barang', 'Hapus Barang', 'Profil', 'Ekspor Data', 'Riwayat Aktivitas']
+    menu = ['Tambah Barang', 'Lihat Barang', 'Hapus Barang', 'Profil', 'Ekspor Data', 'Riwayat Aktivitas', 'Laporan']
 
 choice = st.sidebar.selectbox('Menu', menu, key='menu_selectbox')
 
@@ -58,9 +58,10 @@ elif choice == 'Tambah Barang':
     quantity = st.number_input('Jumlah', value=1)
     category = st.text_input('Kategori')
     weight = st.number_input('Berat (Kg)', value=1.0)
+    return_date = st.date_input('Tanggal Pengembalian')
     if st.button('Tambah'):
         if name:  # Cek jika nama barang tidak kosong
-            add_item(name, quantity, category, weight)
+            add_item(name, quantity, category, weight, return_date)
             save_items(st.session_state['username'], st.session_state['df'])  # Simpan item setelah menambahkan barang
             st.success('Berhasil menambahkan barang')
             # Tulis ke activity.log
@@ -77,11 +78,10 @@ elif choice == 'Lihat Barang':
     # Cari Barang
     st.subheader('Cari Barang')
     name = st.text_input('Nama Barang')
+    category = st.text_input('Kategori Barang')
     if st.button('Cari'):
-        result = search_item(name)
+        result = search_item(name, category)
         st.write(result)
-        with open('activity.log','a') as f:
-            f.write(f"Barang {name} telah dicari.\n")
 
     # Edit Barang
     st.subheader('Edit Barang')
@@ -92,15 +92,11 @@ elif choice == 'Lihat Barang':
             new_name = st.text_input('Nama Barang Baru', value=old_name)
             quantity = st.number_input('Jumlah', value=int(item_df['Jumlah'].values[0]))
             category = st.text_input('Kategori', value=item_df['Kategori'].values[0])
-            if 'Berat (Kg)' in st.session_state['df'].columns and not pd.isnull(item_df['Berat (Kg)'].values[0]):
-                weight = st.number_input('Berat (Kg)', value=float(item_df['Berat (Kg)'].values[0]))
-            else:
-                weight = st.number_input('Berat (Kg)', value=1.0)
+            weight = st.number_input('Berat (Kg)', value=float(item_df['Berat (Kg)'].values[0]))
+            return_date = st.date_input('Tanggal Pengembalian', value=item_df['Tanggal Pengembalian'].values[0])
             if st.button('Edit'):
-                edit_item(old_name, new_name, quantity, category, weight)
+                edit_item(old_name, new_name, quantity, category, weight, return_date)
                 st.success('Berhasil mengedit barang')
-                with open('activity.log','a') as f:
-                    f.write(f"Barang {old_name} telah diedit.\n")
         else:
             st.write('Tidak ada barang dengan nama tersebut')
     else:
@@ -115,7 +111,7 @@ elif choice == 'Hapus Barang':
         if st.button('Hapus'):
             delete_item(name, quantity)
             st.success('Berhasil menghapus barang')
-            with open('activity.log','a') as f:
+            with open(f'{st.session_state["username"]}_activity.log', 'a') as f:
                 f.write(f"Barang {name} telah dihapus dengan jumlah {quantity}.\n")
     else:
         st.write('Tidak ada barang untuk dihapus')
@@ -128,10 +124,11 @@ elif choice == 'Profil':
         email = st.text_input('Email')
         address = st.text_input('Alamat')
         phone = st.text_input('No HP')
+        return_date = st.date_input('Tanggal Pengembalian')
         submit_button = st.form_submit_button('Update Profil')
 
     if submit_button:
-        if update_profile(st.session_state['username'], name, email, address, phone):
+        if update_profile(st.session_state['username'], name, email, address, phone, return_date):
             st.success('Berhasil memperbarui profil')
         else:
             st.error('Gagal memperbarui profil')
@@ -149,3 +146,8 @@ elif choice == 'Riwayat Aktivitas':
             f.write('')  # Buat file kosong
     with open(f'{st.session_state["username"]}_activity.log', 'r') as f:
         st.text(f.read())
+
+# Halaman Laporan
+elif choice == 'Laporan':
+    st.subheader('Laporan Peminjaman')
+    generate_report()
