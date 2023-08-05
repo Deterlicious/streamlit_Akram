@@ -64,7 +64,7 @@ elif choice == 'Tambah Barang':
             save_items(st.session_state['username'], st.session_state['df'])  # Simpan item setelah menambahkan barang
             st.success('Berhasil menambahkan barang')
             # Tulis ke activity.log
-            with open('activity.log', 'a') as f:
+            with open(f'{st.session_state["username"]}_activity.log', 'a') as f:
                 f.write(f"Barang {name} ditambahkan.\n")
         else:
             st.warning('Harap isi nama barang')
@@ -144,8 +144,8 @@ elif choice == 'Ekspor Data':
 # Halaman Riwayat Aktivitas
 elif choice == 'Riwayat Aktivitas':
     st.subheader('Riwayat Aktivitas')
-    if not os.path.exists('activity.log'):
-        with open('activity.log', 'w') as f:
+    if not os.path.exists(f'{st.session_state["username"]}_activity.log'):
+        with open(f'{st.session_state["username"]}_activity.log', 'w') as f:
             f.write('')  # Buat file kosong
-    with open('activity.log', 'r') as f:
+    with open(f'{st.session_state["username"]}_activity.log', 'r') as f:
         st.text(f.read())
