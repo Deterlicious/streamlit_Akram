@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime
 from user_utils import login, register, update_profile, load_profile
 from item_utils import load_items, save_items, add_item, view_items, delete_item, search_item, edit_item, export_data, generate_report
 
@@ -18,7 +19,7 @@ if 'register' not in st.session_state:
 if not st.session_state.get('loggedin', False):
     menu = ['Login', 'Register']
 else:
-    menu = ['Tambah Barang', 'Lihat Barang', 'Hapus Barang', 'Profil', 'Ekspor Data', 'Riwayat Aktivitas', 'Laporan']
+    menu = ['Profil','Tambah Barang', 'Lihat Barang', 'Hapus Barang', 'Ekspor Data', 'Riwayat Aktivitas', 'Laporan']
 
 choice = st.sidebar.selectbox('Menu', menu, key='menu_selectbox')
 
@@ -50,6 +51,22 @@ elif choice == 'Register':
                 st.session_state['register'] = False
             else:
                 st.error('Username sudah ada')
+
+# Halaman Profil
+elif choice == 'Profil':
+    st.subheader('Profil Anda')
+    with st.form(key='profile_form'):
+        name = st.text_input('Nama')
+        email = st.text_input('Email')
+        address = st.text_input('Alamat')
+        phone = st.text_input('No HP')
+        submit_button = st.form_submit_button('Update Profil')
+
+    if submit_button:
+        if update_profile(st.session_state['username'], name, email, address, phone):
+            st.success('Berhasil memperbarui profil')
+        else:
+            st.error('Gagal memperbarui profil')
 
 # Halaman Tambah Barang
 elif choice == 'Tambah Barang':
@@ -93,7 +110,14 @@ elif choice == 'Lihat Barang':
             quantity = st.number_input('Jumlah', value=int(item_df['Jumlah'].values[0]))
             category = st.text_input('Kategori', value=item_df['Kategori'].values[0])
             weight = st.number_input('Berat (Kg)', value=float(item_df['Berat (Kg)'].values[0]))
-            return_date = st.date_input('Tanggal Pengembalian', value=item_df['Tanggal Pengembalian'].values[0])
+            return_date_value = item_df['Tanggal Pengembalian'].values[0]
+            if isinstance(return_date_value, str):
+                try:
+                    return_date_value = datetime.strptime(return_date_value, '%Y-%m-%d')
+                except ValueError:
+                    st.error('Tanggal pengembalian tidak valid')
+                    raise Exception("Tanggal pengembalian tidak valid")
+            return_date = st.date_input('Tanggal Pengembalian', value=return_date_value)
             if st.button('Edit'):
                 edit_item(old_name, new_name, quantity, category, weight, return_date)
                 st.success('Berhasil mengedit barang')
@@ -116,29 +140,7 @@ elif choice == 'Hapus Barang':
     else:
         st.write('Tidak ada barang untuk dihapus')
 
-# Halaman Profil
-elif choice == 'Profil':
-    st.subheader('Profil Anda')
-    with st.form(key='profile_form'):
-        name = st.text_input('Nama')
-        email = st.text_input('Email')
-        address = st.text_input('Alamat')
-        phone = st.text_input('No HP')
-        return_date = st.date_input('Tanggal Pengembalian')
-        submit_button = st.form_submit_button('Update Profil')
 
-    if submit_button:
-        if update_profile(st.session_state['username'], name, email, address, phone, return_date):
-            st.success('Berhasil memperbarui profil')
-        else:
-            st.error('Gagal memperbarui profil')
-
-# Halaman Ekspor Data
-elif choice == 'Ekspor Data':
-    st.subheader('Ekspor Data')
-    export_data()
-
-# Halaman Riwayat Aktivitas
 elif choice == 'Riwayat Aktivitas':
     st.subheader('Riwayat Aktivitas')
     if not os.path.exists(f'{st.session_state["username"]}_activity.log'):
@@ -147,7 +149,17 @@ elif choice == 'Riwayat Aktivitas':
     with open(f'{st.session_state["username"]}_activity.log', 'r') as f:
         st.text(f.read())
 
+    if st.button('Hapus Riwayat Aktivitas'):
+        with open(f'{st.session_state["username"]}_activity.log', 'w') as f:
+            f.write('')  # Hapus isi file
+        st.success('Riwayat aktivitas telah dihapus')
+
 # Halaman Laporan
 elif choice == 'Laporan':
     st.subheader('Laporan Peminjaman')
     generate_report()
+
+# Halaman Ekspor Data
+elif choice == 'Ekspor Data':
+    st.subheader('Ekspor Data')
+    export_data()
